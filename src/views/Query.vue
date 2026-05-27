@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
 import { useConnectionStore } from '../stores/connections'
-import type { QueryResult } from '../types'
+import type { QueryResult, DbItem } from '../types'
 
 const props = defineProps<{ connId: string }>()
 const route = useRoute()
@@ -16,15 +16,21 @@ const result = ref<QueryResult | null>(null)
 const running = ref(false)
 const error = ref('')
 const history = ref<string[]>([])
+const databases = ref<DbItem[]>([])
+const selectedDb = ref('')
 
-const tabs = ['编辑器', '历史记录']
-const activeTab = ref('编辑器')
-
-onMounted(() => {
+onMounted(async () => {
   store.select(connIdNum.value)
   const sqlParam = route.query.sql as string
   if (sqlParam) sql.value = sqlParam
+  await loadDatabases()
 })
+
+async function loadDatabases() {
+  try {
+    databases.value = await api.getSchemas(connIdNum.value)
+  } catch {}
+}
 
 async function runQuery() {
   if (!sql.value.trim()) return
@@ -32,7 +38,7 @@ async function runQuery() {
   error.value = ''
   result.value = null
   try {
-    result.value = await api.runQuery(connIdNum.value, sql.value)
+    result.value = await api.runQuery(connIdNum.value, sql.value, selectedDb.value || undefined)
     history.value.unshift(sql.value)
     if (history.value.length > 20) history.value.pop()
     ElMessage.success('查询完成')
@@ -42,11 +48,6 @@ async function runQuery() {
   } finally {
     running.value = false
   }
-}
-
-function useHistory(h: string) {
-  sql.value = h
-  activeTab.value = '编辑器'
 }
 
 function clearResult() {
@@ -60,6 +61,20 @@ function clearResult() {
     <div class="page-header">
       <h2>SQL 查询</h2>
       <div class="header-actions">
+        <el-select
+          v-model="selectedDb"
+          placeholder="选择数据库"
+          clearable
+          style="width: 180px"
+          @change="() => {}"
+        >
+          <el-option
+            v-for="db in databases"
+            :key="db.name"
+            :label="db.name"
+            :value="db.name"
+          />
+        </el-select>
         <el-button @click="clearResult">清空结果</el-button>
         <el-button type="primary" :loading="running" @click="runQuery">
           ▶ 执行
@@ -68,14 +83,13 @@ function clearResult() {
     </div>
 
     <el-row :gutter="16">
-      <el-col :span="activeTab === '编辑器' ? 24 : 8">
+      <el-col :span="24">
         <el-card shadow="never" class="sql-card">
           <el-input
             v-model="sql"
             type="textarea"
             :rows="8"
             placeholder="输入 SQL 语句，例如：SELECT * FROM users LIMIT 50"
-            font-family="monospace"
             style="font-family: 'SF Mono', Menlo, monospace; font-size: 13px"
           />
           <div class="sql-tips">
@@ -86,7 +100,7 @@ function clearResult() {
         </el-card>
       </el-col>
 
-      <el-col :span="activeTab === '历史记录' ? 24 : 24" style="margin-top: 16px">
+      <el-col :span="24" style="margin-top: 16px">
         <el-card shadow="never" v-if="error">
           <template #header>
             <span style="color: #f56c6c">错误</span>
@@ -131,10 +145,14 @@ function clearResult() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .header-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .sql-card {
   margin-bottom: 16px;

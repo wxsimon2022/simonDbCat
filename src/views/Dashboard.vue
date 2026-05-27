@@ -101,7 +101,7 @@ function openQuery(table?: string) {
         v-else
         :data="filteredTables"
         stripe
-        @row-click="(row) => viewTable(row.name)"
+        @row-click="(row: any) => viewTable(row.name)"
         style="cursor: pointer"
       >
         <el-table-column prop="name" label="表名" />

@@ -151,7 +151,7 @@ function getTypeIcon(type: string) {
           </el-col>
           <el-col :span="8">
             <el-form-item label="端口">
-              <el-input-number v-model="form.port" :min="1" :max="65535" style="width: 100%" />
+              <el-input v-model.number="form.port" type="number" min="1" max="65535" class="no-spinner" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -219,5 +219,13 @@ function getTypeIcon(type: string) {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+.no-spinner :deep(input::-webkit-outer-spin-button),
+.no-spinner :deep(input::-webkit-inner-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner :deep(input[type="number"]) {
+  -moz-appearance: textfield;
 }
 </style>

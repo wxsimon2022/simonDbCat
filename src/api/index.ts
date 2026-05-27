@@ -2,7 +2,7 @@ import axios from 'axios'
 import type { ConnectionConfig, TableData, QueryResult, DbItem } from '../types'
 
 const http = axios.create({
-  baseURL: 'http://localhost:3100/api',
+  baseURL: '/api',
   timeout: 15000,
 })
 
@@ -17,7 +17,10 @@ export const api = {
 
   // Databases
   getSchemas: (connId: number) => http.get<DbItem[]>(`/databases/${connId}/schemas`).then(r => r.data),
-  getTables: (connId: number) => http.get<DbItem[]>(`/databases/${connId}/tables`).then(r => r.data),
-  getTableData: (connId: number, table: string) => http.get<TableData>(`/databases/${connId}/tables/${table}`).then(r => r.data),
-  runQuery: (connId: number, sql: string) => http.post<QueryResult>(`/databases/${connId}/query`, { sql }).then(r => r.data),
+  getTables: (connId: number, database?: string) =>
+    http.get<DbItem[]>(`/databases/${connId}/tables`, { params: { database } }).then(r => r.data),
+  getTableData: (connId: number, table: string, database?: string) =>
+    http.get<TableData>(`/databases/${connId}/tables/${table}`, { params: { database } }).then(r => r.data),
+  runQuery: (connId: number, sql: string, database?: string) =>
+    http.post<QueryResult>(`/databases/${connId}/query`, { sql, database }).then(r => r.data),
 }

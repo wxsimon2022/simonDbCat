@@ -1,4 +1,4 @@
-const configDb = require('./database');
+const configDb = require('./database.cjs');
 
 function getAll() {
   return configDb.prepare('SELECT * FROM connections ORDER BY updated_at DESC').all();

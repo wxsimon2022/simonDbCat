@@ -24,3 +24,13 @@ dist-ssr
 *.sw?
 .vscode
 .idea
+
+# Build output
+release/
+
+# Local env
+.env
+
+# Server data
+server/data/
+

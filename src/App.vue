@@ -22,7 +22,7 @@ watch(() => route.path, () => {
         <el-button text @click="drawer = !drawer" style="font-size: 20px; color: #fff">
           ☰
         </el-button>
-        <span class="logo">MyDB</span>
+        <span class="logo">simonDbCat</span>
         <span class="subtitle">数据库管理工具</span>
       </div>
       <div class="header-right">
@@ -36,7 +36,7 @@ watch(() => route.path, () => {
       <el-drawer v-model="drawer" direction="ltr" size="240px" :with-header="false">
         <el-menu
           :default-active="route.path"
-          @select="(idx) => router.push(idx)"
+          @select="(idx: string) => router.push(idx)"
           style="border-right: none"
         >
           <el-menu-item index="/connections">
