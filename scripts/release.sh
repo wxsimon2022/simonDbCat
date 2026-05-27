@@ -84,7 +84,7 @@ fi
 
 # ─── 3. Prepare Git Tag ─────────────────────────────
 VERSION="$(node -p "require('./package.json').version")"
-TAG="v${VERSION}-$(date +%Y%m%d%H%M%S)"
+TAG="v${VERSION}"
 
 info "🏷️  创建 Tag: $TAG"
 
