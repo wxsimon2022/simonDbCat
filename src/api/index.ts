@@ -15,12 +15,16 @@ export const api = {
   deleteConnection: (id: number) => http.delete(`/connections/${id}`).then(r => r.data),
   testConnection: (data: Partial<ConnectionConfig>) => http.post<{ ok: boolean }>('/connections/test', data).then(r => r.data),
 
-  // Databases
-  getSchemas: (connId: number) => http.get<DbItem[]>(`/databases/${connId}/schemas`).then(r => r.data),
+  // Databases — 全部用查询参数传 database
+  getSchemas: (connId: number) =>
+    http.get<DbItem[]>(`/databases/${connId}/schemas`).then(r => r.data),
+
   getTables: (connId: number, database?: string) =>
-    http.get<DbItem[]>(`/databases/${connId}/tables`, { params: { database } }).then(r => r.data),
+    http.get<DbItem[]>(`/databases/${connId}/tables`, { params: { database: database || undefined } }).then(r => r.data),
+
   getTableData: (connId: number, table: string, database?: string) =>
-    http.get<TableData>(`/databases/${connId}/tables/${table}`, { params: { database } }).then(r => r.data),
+    http.get<TableData>(`/databases/${connId}/tables/${encodeURIComponent(table)}`, { params: { database: database || undefined } }).then(r => r.data),
+
   runQuery: (connId: number, sql: string, database?: string) =>
     http.post<QueryResult>(`/databases/${connId}/query`, { sql, database }).then(r => r.data),
 }

@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
 import type { TableData } from '../types'
 
 const props = defineProps<{ connId: string; tableName: string }>()
+const route = useRoute()
+
 const data = ref<TableData | null>(null)
 const loading = ref(false)
 
 const connIdNum = computed(() => Number(props.connId))
+const database = computed(() => (route.query.database as string) || undefined)
 
 onMounted(async () => {
   await loadData()
@@ -17,7 +21,7 @@ onMounted(async () => {
 async function loadData() {
   loading.value = true
   try {
-    data.value = await api.getTableData(connIdNum.value, props.tableName)
+    data.value = await api.getTableData(connIdNum.value, props.tableName, database.value)
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error || '加载失败')
   } finally {
@@ -32,6 +36,7 @@ async function loadData() {
       <div>
         <h2>{{ tableName }}</h2>
         <span class="meta" v-if="data">共 {{ data.total }} 条记录</span>
+        <span class="meta" v-if="database"> · 库: {{ database }}</span>
       </div>
       <el-button @click="loadData" :loading="loading">刷新</el-button>
     </div>
@@ -65,7 +70,6 @@ async function loadData() {
           border
           max-height="600"
           style="width: 100%"
-          :default-sort="{ prop: data.columns[0]?.Field, order: 'ascending' }"
         >
           <el-table-column
             v-for="col in data.columns"

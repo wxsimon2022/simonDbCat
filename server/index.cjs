@@ -2,14 +2,18 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const connStore = require('./connections.cjs');
-const configDb = require('./database.cjs');
 
 function createApp() {
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-  // --- Connection Config CRUD ---
+  // ─── Debug ──────────────────────────────────────────
+  app.get('/api/debug/echo', (req, res) => {
+    res.json({ query: req.query, url: req.url });
+  });
+
+  // ─── Connection Config CRUD ──────────────────────────
   app.get('/api/connections', (req, res) => {
     res.json(connStore.getAll());
   });
@@ -56,64 +60,68 @@ function createApp() {
     }
   });
 
-  // --- Database Operations ---
+  // ─── MySQL Helper ──────────────────────────────────
   async function getClient(connId, database) {
     const conf = connStore.getById(Number(connId));
     if (!conf) throw new Error('Connection not found');
-    return mysql.createConnection({
+    const c = await mysql.createConnection({
       host: conf.host,
       port: conf.port,
       user: conf.username,
       password: conf.password,
-      database: database || conf.database || undefined,
       connectTimeout: 10000,
     });
+    const db = database || conf.database;
+    if (db) {
+      try { await c.query('USE ' + mysql.escapeId(db)); } catch (useErr) { c.end(); throw new Error('Cannot switch to database "' + db + '": ' + useErr.message); }
+    }
+    return c;
   }
 
-  app.get('/api/databases/:connId/tables', async (req, res) => {
+  // ─── Database API ──────────────────────────────────
+  app.get('/api/databases/:connId/schemas', async (req, res) => {
     try {
-      const c = await getClient(req.params.connId, req.query.database);
-      const [rows] = await c.query('SHOW TABLES');
+      const c = await getClient(req.params.connId);
+      const [rows] = await c.query('SHOW DATABASES');
       await c.end();
-      const key = Object.keys(rows[0] || {})[0] || `Tables_in_${rows[0]?.['Tables_in_'] || 'db'}`;
-      res.json(rows.map(r => ({ name: r[key] })));
+      res.json(rows.map(r => ({ name: r.Database })));
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
   });
 
+  app.get('/api/databases/:connId/tables', async (req, res) => {
+    try {
+      const c = await getClient(req.params.connId, req.query.database || req.query.db);
+      const [rows] = await c.query('SHOW TABLES');
+      await c.end();
+      const key = Object.keys(rows[0] || {})[0] || 'Tables_in_' + (req.query.database || '');
+      res.json(rows.map(r => ({ name: r[key] })));
+    } catch (e) {
+      res.status(400).json({ error: e.message, database: req.query.database, connId: req.params.connId });
+    }
+  });
+
   app.get('/api/databases/:connId/tables/:table', async (req, res) => {
     try {
-      const c = await getClient(req.params.connId, req.query.database);
-      const [cols] = await c.query(`DESCRIBE \`${req.params.table}\``);
-      const [rows] = await c.query(`SELECT * FROM \`${req.params.table}\` LIMIT 200`);
+      const c = await getClient(req.params.connId, req.query.database || req.query.db);
+      const safeTable = mysql.escapeId(req.params.table);
+      const [cols] = await c.query('DESCRIBE ' + safeTable);
+      const [rows] = await c.query('SELECT * FROM ' + safeTable + ' LIMIT 200');
       await c.end();
       res.json({ columns: cols, rows, total: rows.length });
     } catch (e) {
-      res.status(400).json({ error: e.message });
+      res.status(400).json({ error: e.message, database: req.body.database, connId: req.params.connId });
     }
   });
 
   app.post('/api/databases/:connId/query', async (req, res) => {
     try {
       const c = await getClient(req.params.connId, req.body.database);
-      const sql = req.body.sql;
-      const [rows, fields] = await c.query(sql);
+      const [rows, fields] = await c.query(req.body.sql);
       await c.end();
       const cols = fields ? fields.map(f => ({ Field: f.name, Type: f.type })) : [];
       res.json({ columns: cols, rows, affectedRows: rows?.affectedRows || 0 });
-    } catch (e) {
-      res.status(400).json({ error: e.message });
-    }
-  });
-
-  app.get('/api/databases/:connId/schemas', async (req, res) => {
-    try {
-      const c = await getClient(req.params.connId);
-      const [rows] = await c.query('SHOW DATABASES');
-      await c.end();
-      const key = 'Database';
-      res.json(rows.map(r => ({ name: r[key] })));
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
@@ -133,7 +141,6 @@ function startServer(port = 3100) {
   });
 }
 
-// Standalone mode
 if (require.main === module) {
   startServer(3100);
 }

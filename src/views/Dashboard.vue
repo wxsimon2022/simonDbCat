@@ -13,7 +13,9 @@ const store = useConnectionStore()
 const tables = ref<DbItem[]>([])
 const schemas = ref<DbItem[]>([])
 const loading = ref(false)
+const loadingSchemas = ref(false)
 const search = ref('')
+const selectedDb = ref('')
 
 const connIdNum = computed(() => Number(props.connId))
 const currentConn = computed(() => store.list.find(c => c.id === connIdNum.value))
@@ -23,29 +25,68 @@ const filteredTables = computed(() =>
 
 onMounted(async () => {
   store.select(connIdNum.value)
-  await loadTables()
+  // 等 store 加载完再获取 schemas
+  if (!store.list.length) {
+    await store.fetchAll()
+  }
+  await loadSchemas()
+  // 自动选中默认库
+  if (currentConn.value?.database && schemas.value.some(s => s.name === currentConn.value!.database)) {
+    selectedDb.value = currentConn.value.database
+    await loadTables()
+  }
 })
 
-async function loadTables() {
-  loading.value = true
+async function loadSchemas() {
+  loadingSchemas.value = true
   try {
-    tables.value = await api.getTables(connIdNum.value)
     schemas.value = await api.getSchemas(connIdNum.value)
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error('获取数据库列表失败: ' + (e.response?.data?.error || e.message))
+  } finally {
+    loadingSchemas.value = false
+  }
+}
+
+async function onDbChange(db: string) {
+  selectedDb.value = db
+  if (db) {
+    await loadTables()
+  } else {
+    tables.value = []
+  }
+}
+
+async function loadTables() {
+  if (!selectedDb.value) return
+  loading.value = true
+  try {
+    tables.value = await api.getTables(connIdNum.value, selectedDb.value)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error || '加载表列表失败')
   } finally {
     loading.value = false
   }
 }
 
+async function handleRefresh() {
+  if (selectedDb.value) {
+    await loadTables()
+  } else {
+    await loadSchemas()
+  }
+}
+
 function viewTable(table: string) {
-  router.push(`/table/${props.connId}/${table}`)
+  const dbQ = `?database=${encodeURIComponent(selectedDb.value)}`
+  router.push(`/table/${props.connId}/${encodeURIComponent(table)}${dbQ}`)
 }
 
 function openQuery(table?: string) {
+  const dbQ = `database=${encodeURIComponent(selectedDb.value)}`
   const path = table
-    ? `/query/${props.connId}?sql=SELECT * FROM \`${table}\` LIMIT 100`
-    : `/query/${props.connId}`
+    ? `/query/${props.connId}?sql=${encodeURIComponent(`SELECT * FROM \`${table}\` LIMIT 100`)}&${dbQ}`
+    : `/query/${props.connId}?${dbQ}`
   router.push(path)
 }
 </script>
@@ -58,8 +99,23 @@ function openQuery(table?: string) {
         <span class="conn-badge">{{ currentConn?.host }}:{{ currentConn?.port }}</span>
       </div>
       <div class="header-actions">
-        <el-button @click="loadTables" :loading="loading">刷新</el-button>
-        <el-button type="primary" @click="openQuery()">SQL 查询</el-button>
+        <el-select
+          v-model="selectedDb"
+          placeholder="选择数据库"
+          style="width: 200px"
+          clearable
+          :loading="loadingSchemas"
+          @change="onDbChange"
+        >
+          <el-option
+            v-for="db in schemas"
+            :key="db.name"
+            :label="db.name"
+            :value="db.name"
+          />
+        </el-select>
+        <el-button @click="handleRefresh" :loading="loading">刷新</el-button>
+        <el-button type="primary" @click="openQuery()" :disabled="!selectedDb">SQL 查询</el-button>
       </div>
     </div>
 
@@ -93,7 +149,11 @@ function openQuery(table?: string) {
         </div>
       </template>
 
-      <div v-if="loading" style="text-align: center; padding: 40px">
+      <div v-if="!selectedDb" style="text-align:center;padding:40px;color:#909399">
+        请先在上方选择一个数据库
+      </div>
+
+      <div v-else-if="loading" style="text-align: center; padding: 40px">
         <el-icon class="is-loading" :size="32"><Loading /></el-icon>
       </div>
 
@@ -113,7 +173,7 @@ function openQuery(table?: string) {
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!loading && !filteredTables.length" description="没有找到表" />
+      <el-empty v-if="!loading && selectedDb && !filteredTables.length" description="没有找到表" />
     </el-card>
   </div>
 </template>
@@ -124,6 +184,8 @@ function openQuery(table?: string) {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .conn-badge {
   font-size: 12px;
@@ -132,6 +194,8 @@ function openQuery(table?: string) {
 .header-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .stats-row {
   display: flex;

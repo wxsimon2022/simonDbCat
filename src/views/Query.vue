@@ -23,6 +23,8 @@ onMounted(async () => {
   store.select(connIdNum.value)
   const sqlParam = route.query.sql as string
   if (sqlParam) sql.value = sqlParam
+  const dbParam = route.query.database as string
+  if (dbParam) selectedDb.value = dbParam
   await loadDatabases()
 })
 
