@@ -8,10 +8,10 @@ let serverInstance = null;
 
 async function startApp() {
   try {
-    // Determine server paths
+    // Determine server path (inside app.asar in production)
     const serverPath = isDev
       ? path.join(__dirname, '..', 'server', 'index.cjs')
-      : path.join(process.resourcesPath, 'server', 'index.cjs');
+      : path.join(process.resourcesPath, 'app.asar', 'server', 'index.cjs');
 
     // Validate server file exists
     if (!fs.existsSync(serverPath)) {
@@ -24,7 +24,7 @@ async function startApp() {
     const port = await findPort(3100);
     const distPath = isDev
       ? path.join(__dirname, '..', 'dist')
-      : path.join(process.resourcesPath, 'app.asar', 'dist');
+      : path.join(path.dirname(serverPath), '..', 'dist');
     serverInstance = await startServer(port, distPath);
 
     createWindow(port);
