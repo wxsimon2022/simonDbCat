@@ -123,12 +123,6 @@ function setupIPC() {
     autoUpdater.quitAndInstall()
   })
 }
-  })
-
-  ipcMain.handle('install-update', () => {
-    autoUpdater.quitAndInstall();
-  });
-}
 
 // ─── App Start ────────────────────────────────────
 async function startApp() {

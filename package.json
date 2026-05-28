@@ -40,6 +40,7 @@
     "concurrently": "^9.2.1",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3",
+    "sharp": "^0.34.5",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",
     "vue-tsc": "^3.2.8"
@@ -88,8 +89,7 @@
       "target": [
         "nsis",
         "portable"
-      ],
-      "icon": null
+      ]
     },
     "linux": {
       "target": [
@@ -109,6 +109,7 @@
       "repo": "simonDbCat",
       "releaseType": "release"
     },
-    "generateUpdatesFilesForAllChannels": true
+    "generateUpdatesFilesForAllChannels": true,
+    "icon": "build/icon.png"
   }
 }

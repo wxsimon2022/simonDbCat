@@ -108,7 +108,7 @@ function openNewQuery() {
     <!-- Top Bar -->
     <div class="topbar">
       <div class="topbar-left">
-        <img src="./assets/hero.png" class="topbar-icon" alt="logo" />
+        <img src="./assets/logo.svg" class="topbar-icon" alt="logo" />
         <span class="topbar-logo">simonDbCat</span><span class="topbar-version">v{{ appVersion }}</span>
       </div>
       <div class="topbar-center">

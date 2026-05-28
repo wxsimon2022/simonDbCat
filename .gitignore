@@ -34,3 +34,4 @@ release/
 # Server data
 server/data/
 
+build/
