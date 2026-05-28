@@ -19,7 +19,7 @@ err()   { echo -e "${RED}[ERROR]${NC} $*"; }
 # ─── Help ────────────────────────────────────────────────
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   cat <<EOF
-用法: bash scripts/release.sh [--upload-only] [--yes]
+用法: bash scripts/release.sh [--upload-only] [--push]
 
 步骤:
   1. 构建前端 (vite build)
@@ -30,7 +30,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 
 选项:
   --upload-only  跳过构建，仅用已有的 release/ 产物创建 Release
-  --yes, -y       跳过确认提示，直接发布
+  --push, -y       跳过确认提示，直接发布
   --help, -h     显示帮助
 
 前置条件:
@@ -42,7 +42,7 @@ fi
 
 UPLOAD_ONLY="${1:-}"
 SKIP_CONFIRM=false
-[[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]] && SKIP_CONFIRM=true
+[[ "$*" == *"--push"* ]] || [[ "$*" == *"-y"* ]] && SKIP_CONFIRM=true
 
 # ─── 检查 gh ─────────────────────────────────────────
 if ! command -v gh &>/dev/null; then
