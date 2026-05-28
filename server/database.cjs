@@ -1,15 +1,22 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-// In production (Electron packaged), use userData directory for writable DB
-// In dev, use the server/data directory
+// Check if running inside Electron asar (packaged)
+const isPacked = __dirname.includes('.asar');
+
 let DB_DIR;
 
-if (process.resourcesPath && !process.env.VITE_DEV_SERVER) {
-  // Production: copy from resources to writable userData path
-  const userDataDir = process.env.ELECTRON_USER_DATA || path.join(require('os').homedir(), '.simonDbCat');
-  DB_DIR = path.join(userDataDir, 'data');
+if (isPacked) {
+  // Production (packaged): use writable path in user's home
+  DB_DIR = path.join(os.homedir(), '.simonDbCat', 'data');
+  const srcDb = path.join(__dirname, '..', '..', '..', 'server', 'data', 'config.db');
+  // Copy default DB if exists and target doesn't exist
+  if (!fs.existsSync(path.join(DB_DIR, 'config.db')) && fs.existsSync(srcDb)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+    fs.copyFileSync(srcDb, path.join(DB_DIR, 'config.db'));
+  }
 } else {
   // Development
   DB_DIR = path.join(__dirname, 'data');
@@ -20,15 +27,6 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 const CONFIG_DB = path.join(DB_DIR, 'config.db');
-
-// In production, copy default DB if it doesn't exist
-if (process.resourcesPath && !fs.existsSync(CONFIG_DB)) {
-  const srcDb = path.join(process.resourcesPath, 'server', 'data', 'config.db');
-  if (fs.existsSync(srcDb)) {
-    fs.copyFileSync(srcDb, CONFIG_DB);
-  }
-}
-
 const db = new Database(CONFIG_DB);
 
 db.exec(`

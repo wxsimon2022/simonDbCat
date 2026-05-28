@@ -22,7 +22,10 @@ async function startApp() {
 
     // Find available port
     const port = await findPort(3100);
-    serverInstance = await startServer(port);
+    const distPath = isDev
+      ? path.join(__dirname, '..', 'dist')
+      : path.join(process.resourcesPath, 'app.asar', 'dist');
+    serverInstance = await startServer(port, distPath);
 
     createWindow(port);
   } catch (err) {

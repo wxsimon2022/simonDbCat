@@ -3,18 +3,18 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const connStore = require('./connections.cjs');
 
-function createApp() {
+function createApp(distPath) {
   const app = express();
   app.use(cors());
   app.use(express.json());
 
   // Serve built frontend in production
-  const distPath = path.join(__dirname, '..', 'dist');
-  if (fs.existsSync(path.join(distPath, 'index.html'))) {
-    app.use(express.static(distPath));
+  const frontendPath = distPath || path.join(__dirname, '..', 'dist');
+  if (fs.existsSync(path.join(frontendPath, 'index.html'))) {
+    app.use(express.static(frontendPath));
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/')) return next();
-      res.sendFile(path.join(distPath, 'index.html'));
+      res.sendFile(path.join(frontendPath, 'index.html'));
     });
   }
 
@@ -142,9 +142,9 @@ function createApp() {
   return app;
 }
 
-function startServer(port = 3100) {
+function startServer(port = 3100, distPath) {
   return new Promise((resolve, reject) => {
-    const app = createApp();
+    const app = createApp(distPath);
     const server = app.listen(port, () => {
       console.log(`✅ simonDbCat server running at http://localhost:${port}`);
       resolve(server);
