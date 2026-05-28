@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const connStore = require('./connections.cjs');
+const path = require('path');
+const fs = require('fs');
 
 function createApp(distPath) {
   const app = express();
