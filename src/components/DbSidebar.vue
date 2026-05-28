@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../api'
 import { useConnectionStore } from '../stores/connections'
@@ -10,6 +10,7 @@ interface TreeNode {
   label: string
   type: 'connection' | 'database' | 'table'
   isLeaf?: boolean
+  children?: TreeNode[]
   connId?: number
   database?: string
   table?: string
@@ -26,59 +27,76 @@ interface ContextMenu {
 const store = useConnectionStore()
 const tabStore = useTabStore()
 const treeData = ref<TreeNode[]>([])
+const expandedKeys = ref<string[]>([])
+const loading = ref(false)
 const searchQuery = ref('')
 const contextMenu = ref<ContextMenu>({ visible: false, x: 0, y: 0, node: null, items: [] })
-const treeKey = ref(0) // force re-render on refresh
 
 onMounted(async () => {
-  if (!store.list.length) {
-    try { await store.fetchAll() } catch {}
-  }
-  buildTree()
   document.addEventListener('click', closeContextMenu)
+  await loadTree()
 })
 onUnmounted(() => document.removeEventListener('click', closeContextMenu))
 
-function buildTree() {
-  treeData.value = store.list.map(conn => ({
-    id: `conn-${conn.id}`,
-    label: conn.name || `连接 ${conn.id}`,
-    type: 'connection' as const,
-    connId: conn.id,
-    isLeaf: false, // has children (databases)
-  }))
-}
-
-async function loadNode(node: TreeNode, resolve: (children: TreeNode[]) => void) {
+async function loadTree() {
+  loading.value = true
   try {
-    if (node.type === 'connection') {
-      const schemas = await api.getSchemas(node.connId!)
-      resolve(schemas.map(db => ({
-        id: `db-${node.connId}-${db.name}`,
-        label: db.name,
-        type: 'database' as const,
-        connId: node.connId,
-        database: db.name,
-        isLeaf: false, // has tables
-      })))
-    } else if (node.type === 'database') {
-      const tables = await api.getTables(node.connId!, node.database)
-      resolve(tables.map(t => ({
-        id: `table-${node.connId}-${node.database}-${t.name}`,
-        label: t.name,
-        type: 'table' as const,
-        connId: node.connId,
-        database: node.database,
-        table: t.name,
-        isLeaf: true, // leaf node
-      })))
-    } else {
-      resolve([])
+    // 1. Load connections
+    if (!store.list.length) await store.fetchAll()
+    if (!store.list.length) { treeData.value = []; return }
+
+    // 2. For each connection, build full tree
+    const roots: TreeNode[] = []
+    for (const conn of store.list) {
+      const connNode: TreeNode = {
+        id: `conn-${conn.id}`,
+        label: conn.name || `连接 ${conn.id}`,
+        type: 'connection',
+        connId: conn.id,
+        children: [],
+      }
+      try {
+        // 3. Load databases for this connection
+        const schemas = await api.getSchemas(conn.id!)
+        for (const db of schemas) {
+          const dbNode: TreeNode = {
+            id: `db-${conn.id}-${db.name}`,
+            label: db.name,
+            type: 'database',
+            connId: conn.id,
+            database: db.name,
+            children: [],
+          }
+          try {
+            // 4. Load tables for this database
+            const tables = await api.getTables(conn.id!, db.name)
+            for (const t of tables) {
+              dbNode.children!.push({
+                id: `table-${conn.id}-${db.name}-${t.name}`,
+                label: t.name,
+                type: 'table',
+                connId: conn.id,
+                database: db.name,
+                table: t.name,
+                isLeaf: true,
+              })
+            }
+          } catch (e: any) {
+            console.warn(`加载库 ${db.name} 的表失败:`, e.message)
+          }
+          connNode.children!.push(dbNode)
+        }
+      } catch (e: any) {
+        console.warn(`加载连接 ${conn.name} 的库失败:`, e.message)
+      }
+      roots.push(connNode)
     }
+    treeData.value = roots
+    expandedKeys.value = roots.map(r => r.id)
   } catch (e: any) {
-    console.error('loadNode error:', e)
-    ElMessage.error(`加载 ${node.label} 失败: ${e.response?.data?.error || e.message}`)
-    resolve([])
+    ElMessage.error('加载失败: ' + (e.message || '未知错误'))
+  } finally {
+    loading.value = false
   }
 }
 
@@ -119,17 +137,9 @@ function getNodeIcon(node: TreeNode): string {
   }
 }
 
-async function refreshTree() {
-  treeData.value = []
-  await store.fetchAll()
-  treeKey.value++
-  buildTree()
-}
-
 function handleContextMenu(node: TreeNode, event: MouseEvent) {
   event.preventDefault(); event.stopPropagation()
   const items: ContextMenu['items'] = []
-
   if (node.type === 'table') {
     items.push(
       { label: '打开表', icon: '📂', action: () => handleNodeClick(node) },
@@ -142,15 +152,8 @@ function handleContextMenu(node: TreeNode, event: MouseEvent) {
       { label: '删除表', icon: '❌', action: () => dropTable(node) },
     )
   } else if (node.type === 'database') {
-    items.push(
-      { label: '新建查询', icon: '📝', action: () => openNewQuery(node) },
-    )
-  } else if (node.type === 'connection') {
-    items.push(
-      { label: '刷新', icon: '🔄', action: () => { treeKey.value++; buildTree() } },
-    )
+    items.push({ label: '新建查询', icon: '📝', action: () => openNewQuery(node) })
   }
-
   if (!items.length) return
   contextMenu.value = { visible: true, x: event.clientX, y: event.clientY, node, items }
 }
@@ -161,6 +164,7 @@ async function duplicateTable(node: TreeNode) {
     await api.runQuery(node.connId!, `CREATE TABLE \`${newName}\` LIKE \`${node.table}\``, node.database!)
     await api.runQuery(node.connId!, `INSERT INTO \`${newName}\` SELECT * FROM \`${node.table}\``, node.database!)
     ElMessage.success(`已复制为「${newName}」`)
+    loadTree()
   } catch (e: any) { ElMessage.error(e.response?.data?.error || '复制失败') }
 }
 
@@ -177,6 +181,7 @@ async function dropTable(node: TreeNode) {
     await ElMessageBox.confirm(`删除表「${node.table}」?`, '删除确认', { type: 'warning' })
     await api.runQuery(node.connId!, `DROP TABLE \`${node.table}\``, node.database!)
     ElMessage.success('表已删除')
+    loadTree()
   } catch {}
 }
 
@@ -187,19 +192,23 @@ function openNewQuery(node: TreeNode) {
   })
 }
 
-// Filter function
-function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
-  return nodes.map(n => {
-    const match = n.label.toLowerCase().includes(query)
-    // For non-leaf nodes, we can't filter children in lazy mode
-    // so just match the label
-    return match ? { ...n } : null
-  }).filter(Boolean) as TreeNode[]
+async function refreshTree() {
+  treeData.value = []
+  await loadTree()
 }
 
-function getFilteredData() {
+const filteredTreeData = computed(() => {
   if (!searchQuery.value) return treeData.value
   return filterTree(treeData.value, searchQuery.value.toLowerCase())
+})
+
+function filterTree(nodes: TreeNode[], q: string): TreeNode[] {
+  return nodes.map(n => {
+    const match = n.label.toLowerCase().includes(q)
+    const fc = n.children ? filterTree(n.children, q) : n.children
+    if (match || (fc && fc.length > 0)) return { ...n, children: fc }
+    return null
+  }).filter(Boolean) as TreeNode[]
 }
 </script>
 
@@ -210,7 +219,7 @@ function getFilteredData() {
       <div class="sidebar-header-actions">
         <span class="conn-count">{{ store.list.length }} 连接</span>
         <el-tooltip content="刷新" placement="bottom">
-          <el-button text size="small" @click="refreshTree" class="header-btn">🔄</el-button>
+          <el-button text size="small" @click="refreshTree" class="header-btn" :loading="loading">🔄</el-button>
         </el-tooltip>
       </div>
     </div>
@@ -218,18 +227,17 @@ function getFilteredData() {
       <el-input v-model="searchQuery" placeholder="筛选..." size="small" clearable prefix-icon="Search" />
     </div>
     <div class="sidebar-tree">
-      <div v-if="!treeData.length && !store.loading" class="tree-empty">
+      <div v-if="loading" class="tree-empty">加载中...</div>
+      <div v-else-if="!treeData.length" class="tree-empty">
         <p v-if="!store.list.length">暂无连接，请在「连接管理」中添加</p>
-        <p v-else>加载中...</p>
+        <p v-else>没有数据</p>
       </div>
       <el-tree
-        v-if="treeData.length"
-        :key="treeKey"
-        :data="getFilteredData()"
+        v-else
+        :data="filteredTreeData"
         node-key="id"
         :props="{ children: 'children', label: 'label', isLeaf: 'isLeaf' }"
-        :load="loadNode"
-        lazy
+        v-model:expanded-keys="expandedKeys"
         highlight-current
         @node-click="handleNodeClick"
         @node-contextmenu="handleContextMenu"
@@ -269,7 +277,7 @@ function getFilteredData() {
 .sidebar-search :deep(.el-input__wrapper) { background: #fff; box-shadow: none; border: 1px solid #d9dce0; border-radius: 3px; }
 .sidebar-search :deep(.el-input__inner) { font-size: 12px; }
 .sidebar-tree { flex: 1; overflow: auto; padding: 2px 0; }
-.tree-empty { padding: 20px; text-align: center; color: #909399; font-size: 12px; }
+.tree-empty { padding: 30px; text-align: center; color: #909399; font-size: 12px; }
 :deep(.el-tree) { background: transparent; --el-tree-node-hover-bg-color: #e3e6ea; --el-tree-node-content-height: 26px; }
 :deep(.el-tree-node__content) { padding: 0 6px; }
 :deep(.el-tree-node__content:hover) { background: #e3e6ea; }
