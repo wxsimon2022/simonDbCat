@@ -48,7 +48,8 @@ async function createWindow() {
     mainWindow.loadURL(`http://localhost:3000`);
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    // Production: Express serves both API and static files
+    mainWindow.loadURL(`http://127.0.0.1:${port}`);
   }
 
   mainWindow.on('closed', () => {

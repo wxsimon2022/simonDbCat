@@ -8,6 +8,19 @@ function createApp() {
   app.use(cors());
   app.use(express.json());
 
+  // Serve built frontend in production
+  const path = require('path');
+  const distPath = path.join(__dirname, '..', 'dist');
+  const fs = require('fs');
+  if (fs.existsSync(path.join(distPath, 'index.html'))) {
+    app.use(express.static(distPath));
+    // SPA fallback - serve index.html for all non-API routes
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
   // ─── Debug ──────────────────────────────────────────
   app.get('/api/debug/echo', (req, res) => {
     res.json({ query: req.query, url: req.url });
