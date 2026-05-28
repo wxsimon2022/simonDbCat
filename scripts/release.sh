@@ -19,7 +19,7 @@ err()   { echo -e "${RED}[ERROR]${NC} $*"; }
 # ─── Help ────────────────────────────────────────────────
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   cat <<EOF
-用法: bash scripts/release.sh [--upload-only]
+用法: bash scripts/release.sh [--upload-only] [--yes]
 
 步骤:
   1. 构建前端 (vite build)
@@ -30,6 +30,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 
 选项:
   --upload-only  跳过构建，仅用已有的 release/ 产物创建 Release
+  --yes, -y       跳过确认提示，直接发布
   --help, -h     显示帮助
 
 前置条件:
@@ -40,6 +41,8 @@ EOF
 fi
 
 UPLOAD_ONLY="${1:-}"
+SKIP_CONFIRM=false
+[[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]] && SKIP_CONFIRM=true
 
 # ─── 检查 gh ─────────────────────────────────────────
 if ! command -v gh &>/dev/null; then
@@ -101,6 +104,20 @@ fi
 git tag -a "$TAG" -m "release $TAG"
 ok "Tag 已创建: $TAG"
 
+# ─── 询问是否发布到 GitHub ────────────────────
+if [ "$SKIP_CONFIRM" = false ]; then
+  echo ""
+  warn "即将推送 tag 和代码并创建 GitHub Release，确认发布?"
+  read -p "  发布到 GitHub? [Y/n] " REPLY
+  if [ "$REPLY" != "" ] && [ "$REPLY" != "Y" ] && [ "$REPLY" != "y" ] && [ "$REPLY" != "yes" ]; then
+    info "⏭️  已跳过 GitHub 发布，本地打包完成 (release/ 目录)"
+    echo ""
+    echo "  Tag:     $TAG (仅本地)"
+    echo "  产物:    release/"
+    exit 0
+  fi
+  echo ""
+fi
 # ─── 4. Push Tag ─────────────────────────────────────
 info "⬆️  推送 Tag 到 GitHub..."
 git push origin "$TAG"
