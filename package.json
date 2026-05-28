@@ -13,7 +13,9 @@
     "preview": "vite preview",
     "server": "node server/index.cjs",
     "release": "bash scripts/release.sh",
-    "release:upload": "bash scripts/release.sh --upload-only"
+    "release:upload": "bash scripts/release.sh --upload-only",
+    "postinstall": "electron-builder install-app-deps || true",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "axios": "^1.16.1",
@@ -62,22 +64,44 @@
     ],
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "identity": false,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "minimumSystemVersion": "10.15"
     },
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "icon": null
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ]
-    }
+    },
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**",
+      "node_modules/mysql2/**"
+    ],
+    "afterSign": null
   }
 }

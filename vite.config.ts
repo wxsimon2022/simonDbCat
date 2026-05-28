@@ -12,4 +12,13 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      onLog(level, log, defaultHandler) {
+        // Suppress INVALID_ANNOTATION warnings from third-party deps
+        if (log.code === 'INVALID_ANNOTATION') return
+        defaultHandler(level, log)
+      },
+    },
+  },
 })

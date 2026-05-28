@@ -9,12 +9,9 @@ function createApp() {
   app.use(express.json());
 
   // Serve built frontend in production
-  const path = require('path');
   const distPath = path.join(__dirname, '..', 'dist');
-  const fs = require('fs');
   if (fs.existsSync(path.join(distPath, 'index.html'))) {
     app.use(express.static(distPath));
-    // SPA fallback - serve index.html for all non-API routes
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/')) return next();
       res.sendFile(path.join(distPath, 'index.html'));
@@ -78,10 +75,10 @@ function createApp() {
     const conf = connStore.getById(Number(connId));
     if (!conf) throw new Error('Connection not found');
     const c = await mysql.createConnection({
-      host: conf.host,
-      port: conf.port,
-      user: conf.username,
-      password: conf.password,
+      host: String(conf.host || '127.0.0.1'),
+      port: Number(conf.port) || 3306,
+      user: String(conf.username || 'root'),
+      password: String(conf.password || ''),
       connectTimeout: 10000,
     });
     const db = database || conf.database;
@@ -108,8 +105,10 @@ function createApp() {
       const c = await getClient(req.params.connId, req.query.database || req.query.db);
       const [rows] = await c.query('SHOW TABLES');
       await c.end();
-      const key = Object.keys(rows[0] || {})[0] || 'Tables_in_' + (req.query.database || '');
-      res.json(rows.map(r => ({ name: r[key] })));
+      if (!rows || rows.length === 0) { res.json([]); return; }
+      const keys = Object.keys(rows[0]);
+      const key = keys[0] || ('Tables_in_' + (req.query.database || ''));
+      res.json(rows.map(r => ({ name: String(r[key] || '') })));
     } catch (e) {
       res.status(400).json({ error: e.message, database: req.query.database, connId: req.params.connId });
     }

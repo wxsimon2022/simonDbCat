@@ -1,18 +1,39 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
-const { startServer } = require('../server/index.cjs');
+const fs = require('fs');
 
 const isDev = !app.isPackaged;
-
 let mainWindow = null;
 let serverInstance = null;
 
-const MAX_PORT_ATTEMPTS = 20;
-const BASE_PORT = 3100;
+async function startApp() {
+  try {
+    // Determine server paths
+    const serverPath = isDev
+      ? path.join(__dirname, '..', 'server', 'index.cjs')
+      : path.join(process.resourcesPath, 'server', 'index.cjs');
+
+    // Validate server file exists
+    if (!fs.existsSync(serverPath)) {
+      throw new Error(`Server file not found at: ${serverPath}`);
+    }
+
+    const { startServer } = require(serverPath);
+
+    // Find available port
+    const port = await findPort(3100);
+    serverInstance = await startServer(port);
+
+    createWindow(port);
+  } catch (err) {
+    console.error('Fatal error:', err);
+    dialog.showErrorBox('启动失败', err.message + '\n\n' + err.stack);
+  }
+}
 
 async function findPort(start) {
   const net = require('net');
-  for (let port = start; port < start + MAX_PORT_ATTEMPTS; port++) {
+  for (let port = start; port < start + 20; port++) {
     try {
       await new Promise((resolve, reject) => {
         const srv = net.createServer();
@@ -24,13 +45,10 @@ async function findPort(start) {
       return port;
     } catch {}
   }
-  throw new Error('No available port found');
+  throw new Error('无法找到可用端口 (3100-3119)');
 }
 
-async function createWindow() {
-  const port = await findPort(BASE_PORT);
-  serverInstance = await startServer(port);
-
+function createWindow(port) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -48,36 +66,28 @@ async function createWindow() {
     mainWindow.loadURL(`http://localhost:3000`);
     mainWindow.webContents.openDevTools();
   } else {
-    // Production: Express serves both API and static files
     mainWindow.loadURL(`http://127.0.0.1:${port}`);
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  // Capture renderer errors
+  mainWindow.webContents.on('console-message', (event, level, msg) => {
+    if (level >= 2) console.error('[renderer]', msg);
   });
+
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(startApp);
 
 app.on('window-all-closed', () => {
-  if (serverInstance) {
-    serverInstance.close();
-    serverInstance = null;
-  }
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (serverInstance) { serverInstance.close(); serverInstance = null; }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
+  if (mainWindow === null) startApp();
 });
 
 app.on('before-quit', () => {
-  if (serverInstance) {
-    serverInstance.close();
-    serverInstance = null;
-  }
+  if (serverInstance) { serverInstance.close(); serverInstance = null; }
 });
