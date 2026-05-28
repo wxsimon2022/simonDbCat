@@ -136,7 +136,7 @@ info "📝 创建 GitHub Release..."
 ASSETS=()
 while IFS= read -r -d '' f; do
   ASSETS+=("$f")
-done < <(find "$ROOT_DIR/release" -maxdepth 1 -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.blockmap" \) -print0)
+done < <(find "$ROOT_DIR/release" -maxdepth 1 -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.blockmap" -o -name "*.yml" \) -print0)
 
 # 生成 Release 说明
 RELEASE_NOTES=$(cat <<EOF
