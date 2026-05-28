@@ -9,7 +9,7 @@
     "dev": "concurrently -n client,server -c blue,green \"npm run dev:client\" \"npm run dev:server\"",
     "build": "vite build",
     "electron:dev": "concurrently -k \"npm run dev:client\" \"sleep 2 && npx electron .\"",
-    "electron:build": "npm version patch --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder --publish=never",
+    "electron:build": "npm version patch && rm -rf dist release && npm run build && npx electron-builder --publish=never",
     "preview": "vite preview",
     "server": "node server/index.cjs",
     "release": "npm version patch && rm -rf dist release && npm run build && npx electron-builder --publish=always && bash scripts/release.sh --upload-only",
@@ -19,7 +19,7 @@
     "electron:build:minor": "npm version minor --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
     "electron:build:major": "npm version major --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
     "version:bump": "npm version patch --no-git-tag-version",
-    "electron:build:publish": "npm version patch --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder --publish=always"
+    "electron:build:publish": "npm version patch && rm -rf dist release && npm run build && npx electron-builder --publish=always"
   },
   "dependencies": {
     "axios": "^1.16.1",
