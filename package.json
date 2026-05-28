@@ -1,7 +1,7 @@
 {
   "name": "mydb",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "scripts": {
     "dev:client": "vite",
@@ -82,8 +82,7 @@
       "identity": false,
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "minimumSystemVersion": "10.15",
-      "publish": null
+      "minimumSystemVersion": "10.15"
     },
     "win": {
       "target": [
