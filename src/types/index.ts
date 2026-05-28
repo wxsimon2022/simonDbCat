@@ -35,3 +35,5 @@ export interface QueryResult {
 export interface DbItem {
   name: string
 }
+// Vite injected global
+declare const __APP_VERSION__: string;

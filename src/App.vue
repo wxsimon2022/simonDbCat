@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useConnectionStore } from './stores/connections'
 import { useTabStore } from './stores/tabs'
+
+const appVersion = __APP_VERSION__
 import DbSidebar from './components/DbSidebar.vue'
 import DataGrid from './components/DataGrid.vue'
 import TableStruct from './components/TableStruct.vue'
@@ -76,7 +78,7 @@ function openNewQuery() {
     <div class="topbar">
       <div class="topbar-left">
         <img src="./assets/hero.png" class="topbar-icon" alt="logo" />
-        <span class="topbar-logo">simonDbCat</span>
+        <span class="topbar-logo">simonDbCat</span><span class="topbar-version">v{{ appVersion }}</span>
       </div>
       <div class="topbar-center">
         <div class="tab-bar-wrapper" v-if="tabStore.tabs.length">
@@ -124,6 +126,7 @@ function openNewQuery() {
           <div class="welcome-content">
             <div class="welcome-icon">🗄️</div>
             <h2>simonDbCat</h2>
+            <span class="welcome-version">v{{ appVersion }}</span>
             <p class="welcome-desc">数据库管理与开发工具</p>
             <p class="welcome-hint">从左侧导航树选择数据库表以查看数据</p>
             <div class="welcome-actions">
@@ -216,6 +219,11 @@ html, body, #app { height: 100%; font-family: -apple-system, BlinkMacSystemFont,
   font-size: 13px;
   letter-spacing: 0.5px;
   color: #ecf0f1;
+}
+.topbar-version {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  margin-left: 4px;
 }
 .topbar-center {
   flex: 1;
@@ -348,9 +356,15 @@ html, body, #app { height: 100%; font-family: -apple-system, BlinkMacSystemFont,
 }
 .welcome-content h2 {
   font-size: 24px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   color: #303133;
   font-weight: 600;
+}
+.welcome-version {
+  font-size: 12px;
+  color: #909399;
+  display: block;
+  margin-bottom: 6px;
 }
 .welcome-desc {
   font-size: 13px;
