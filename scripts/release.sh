@@ -82,7 +82,10 @@ if [ ! -d "$ROOT_DIR/release" ]; then
   exit 1
 fi
 
-# ─── 3. Prepare Git Tag ─────────────────────────────
+# ─── 3. Bump version + Prepare Git Tag ────────────
+info "🔢 基于最新 GitHub Release 递增版本..."
+node scripts/bump-version.cjs patch --no-tag
+
 VERSION="$(node -p "require('./package.json').version")"
 TAG="v${VERSION}"
 

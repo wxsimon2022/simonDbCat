@@ -1,7 +1,7 @@
 {
   "name": "mydb",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "scripts": {
     "dev:client": "vite",
@@ -12,7 +12,7 @@
     "electron:build": "node scripts/bump-version.cjs patch && rm -rf dist release && npm run build && npx electron-builder --publish=never",
     "preview": "vite preview",
     "server": "node server/index.cjs",
-    "release": "npm version patch && rm -rf dist release && npm run build && npx electron-builder --publish=always && bash scripts/release.sh --upload-only",
+    "release": "node scripts/bump-version.cjs patch --no-tag && rm -rf dist release && npm run build && npx electron-builder --publish=always && bash scripts/release.sh --upload-only",
     "release:upload": "bash scripts/release.sh --upload-only",
     "postinstall": "electron-builder install-app-deps || true",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
