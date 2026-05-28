@@ -1,9 +1,199 @@
-* {
+/* ====== Global Styles ====== */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 html, body, #app {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  background: #f0f2f5;
+}
+
+/* ====== Scrollbar (Navicat style) ====== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c5ca;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8adb3;
+  background-clip: content-box;
+}
+
+/* ====== Element Plus Overrides ====== */
+
+/* Cards - Navicat style */
+.el-card {
+  border: 1px solid #d9dce0 !important;
+  border-radius: 4px !important;
+}
+.el-card__header {
+  padding: 8px 16px !important;
+  background: #fafafa;
+  border-bottom: 1px solid #e4e7ed !important;
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+
+/* Dialog */
+.el-dialog {
+  border-radius: 6px !important;
+}
+.el-dialog__header {
+  padding: 14px 20px !important;
+  border-bottom: 1px solid #e4e7ed !important;
+  margin: 0 !important;
+}
+.el-dialog__headerbtn {
+  top: 14px !important;
+}
+.el-dialog__title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+.el-dialog__body {
+  padding: 20px !important;
+}
+.el-dialog__footer {
+  padding: 12px 20px !important;
+  border-top: 1px solid #e4e7ed !important;
+}
+
+/* Drawer */
+.el-drawer {
+  border-left: 1px solid #d9dce0 !important;
+}
+.el-drawer__header {
+  margin-bottom: 0 !important;
+  padding: 14px 16px !important;
+  border-bottom: 1px solid #e4e7ed !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+.el-drawer__body {
+  padding: 16px !important;
+}
+
+/* Table - Navicat grid style */
+.el-table {
+  border: 1px solid #d9dce0 !important;
+  border-radius: 3px !important;
+}
+.el-table th.el-table__cell {
+  background: #e6e9ed !important;
+  color: #333 !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  padding: 5px 8px !important;
+  border-bottom: 1px solid #d9dce0 !important;
+}
+.el-table td.el-table__cell {
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: #f8f9fb !important;
+}
+.el-table__body tr:hover > td.el-table__cell {
+  background: #e8f0fe !important;
+}
+.el-table--border .el-table__cell {
+  border-right: 1px solid #e4e7ed !important;
+}
+.el-table__body tr.el-table__row--striped:hover td.el-table__cell {
+  background: #e0ebf9 !important;
+}
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background: #e8f0fe !important;
+}
+
+/* Input - compact Navicat style */
+.el-input--small .el-input__wrapper {
+  border-radius: 3px !important;
+  box-shadow: 0 0 0 1px #d9dce0 inset !important;
+  padding: 0 8px !important;
+}
+.el-input--small .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #409eff inset !important;
+}
+.el-input--small .el-input__inner {
+  font-size: 12px !important;
+}
+
+/* Button - compact */
+.el-button--small {
+  font-size: 12px !important;
+  padding: 5px 12px !important;
+  border-radius: 3px !important;
+}
+.el-button--small.el-button--primary {
+  font-weight: 500;
+}
+
+/* Tag */
+.el-tag--small {
+  font-size: 11px !important;
+  padding: 0 6px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+}
+
+/* Select */
+.el-select--small .el-select__wrapper {
+  border-radius: 3px !important;
+  box-shadow: 0 0 0 1px #d9dce0 inset !important;
+  padding: 0 8px !important;
+  min-height: 28px !important;
+}
+.el-select--small .el-select__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #409eff inset !important;
+}
+
+/* Tabs - Navicat style */
+.el-tabs__item {
+  font-size: 12px !important;
+  padding: 0 12px !important;
+}
+
+/* Message - compact */
+.el-message {
+  min-width: 200px !important;
+}
+.el-message__content {
+  font-size: 12px !important;
+}
+
+/* Context Menu Overrides */
+.el-dropdown-menu__item {
+  font-size: 12px !important;
+  padding: 5px 16px !important;
+}
+.el-dropdown-menu__item--divided {
+  border-top: 1px solid #e4e7ed !important;
+}
+
+/* Pagination */
+.el-pagination--small .el-pagination__total {
+  font-size: 11px !important;
+}
+.el-pagination button,
+.el-pagination .el-pager li {
+  font-size: 11px !important;
+  min-width: 24px !important;
+  height: 24px !important;
+  line-height: 24px !important;
 }

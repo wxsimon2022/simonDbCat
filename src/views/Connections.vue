@@ -11,6 +11,7 @@ const dialogVisible = ref(false)
 const editing = ref(false)
 const editingId = ref<number | null>(null)
 const testing = ref(false)
+const showPassword = ref(false)
 
 const form = ref<Partial<ConnectionConfig>>({
   name: '',
@@ -96,36 +97,34 @@ function getTypeIcon(type: string) {
 </script>
 
 <template>
-  <div>
-    <div class="page-header">
+  <div class="connections-view">
+    <div class="cv-header">
       <h2>数据库连接</h2>
-      <el-button type="primary" @click="openCreate">+ 新建连接</el-button>
+      <el-button type="primary" size="small" @click="openCreate">+ 新建</el-button>
     </div>
 
-    <el-row :gutter="16">
-      <el-col
+    <div class="conn-list">
+      <div
         v-for="conn in store.list"
         :key="conn.id"
-        :xs="24" :sm="12" :md="8" :lg="6"
-        style="margin-bottom: 16px"
+        class="conn-card"
+        @click="connect(conn)"
       >
-        <el-card shadow="hover" class="conn-card" @click="connect(conn)">
-          <div class="conn-card-body">
-            <div class="conn-icon">{{ getTypeIcon(conn.type) }}</div>
-            <div class="conn-info">
-              <div class="conn-name">{{ conn.name }}</div>
-              <div class="conn-detail">{{ conn.host }}:{{ conn.port }}</div>
-            </div>
-          </div>
-          <div class="conn-actions" @click.stop>
-            <el-button text type="primary" size="small" @click="openEdit(conn)">编辑</el-button>
-            <el-button text type="danger" size="small" @click="handleDelete(conn.id!, conn.name)">删除</el-button>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        <div class="conn-card-left">
+          <div class="conn-icon">{{ getTypeIcon(conn.type) }}</div>
+        </div>
+        <div class="conn-card-center">
+          <div class="conn-name">{{ conn.name }}</div>
+          <div class="conn-detail">{{ conn.host }}:{{ conn.port }}</div>
+        </div>
+        <div class="conn-card-right" @click.stop>
+          <el-button text size="small" @click="openEdit(conn)">编辑</el-button>
+          <el-button text size="small" type="danger" @click="handleDelete(conn.id!, conn.name)">删除</el-button>
+        </div>
+      </div>
+    </div>
 
-    <el-empty v-if="!store.list.length && !store.loading" description="暂无连接配置，点击上方按钮新建" />
+    <el-empty v-if="!store.list.length && !store.loading" description="暂无连接配置" />
 
     <el-dialog
       v-model="dialogVisible"
@@ -159,10 +158,20 @@ function getTypeIcon(type: string) {
           <el-input v-model="form.username" placeholder="root" />
         </el-form-item>
         <el-form-item label="密码">
-          <el-input v-model="form.password" type="password" show-password placeholder="输入密码" />
+          <el-input
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            placeholder="输入密码"
+          >
+            <template #suffix>
+              <span class="pwd-toggle" @click="showPassword = !showPassword">
+                {{ showPassword ? '🙈' : '👁️' }}
+              </span>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="默认数据库">
-          <el-input v-model="form.database" placeholder="可选，留空则显示所有库" />
+          <el-input v-model="form.database" placeholder="可选，留空显示所有库" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -175,50 +184,76 @@ function getTypeIcon(type: string) {
 </template>
 
 <style scoped>
-.page-header {
+.connections-view {
+  padding: 0;
+}
+.cv-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+}
+.cv-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+.conn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .conn-card {
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.conn-card:hover {
-  transform: translateY(-2px);
-}
-.conn-card-body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.conn-card:hover {
+  border-color: #409eff;
+  box-shadow: 0 1px 4px rgba(64,158,255,0.12);
+}
+.conn-card-left {
+  flex-shrink: 0;
 }
 .conn-icon {
-  font-size: 32px;
-  width: 48px;
-  height: 48px;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #ecf5ff;
   border-radius: 8px;
 }
+.conn-card-center {
+  flex: 1;
+  min-width: 0;
+}
 .conn-name {
   font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 4px;
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 2px;
 }
 .conn-detail {
-  font-size: 12px;
+  font-size: 11px;
   color: #909399;
 }
-.conn-actions {
-  border-top: 1px solid #eee;
-  padding-top: 8px;
+.conn-card-right {
+  flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  gap: 4px;
+}
+.pwd-toggle {
+  cursor: pointer;
+  font-size: 14px;
+  user-select: none;
 }
 .no-spinner :deep(input::-webkit-outer-spin-button),
 .no-spinner :deep(input::-webkit-inner-spin-button) {
