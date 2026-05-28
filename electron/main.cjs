@@ -97,21 +97,33 @@ function setupAutoUpdater() {
 
 // ─── IPC Handlers ─────────────────────────────────
 function setupIPC() {
-  ipcMain.handle('get-app-version', () => {
-    return app.getVersion();
-  });
+  ipcMain.handle("get-app-version", () => {
+    return app.getVersion()
+  })
 
-  ipcMain.handle('check-for-updates', async () => {
-    try {
-      await autoUpdater.checkForUpdates();
-    } catch (err) {
-      sendStatus({ status: 'error', message: `检查更新失败: ${err.message}` });
+  ipcMain.handle("check-for-updates", async () => {
+    if (isDev) {
+      sendStatus({ status: "error", message: "开发环境下不支持检查更新，请构建后重试" })
+      return
     }
-  });
+    try {
+      await autoUpdater.checkForUpdates()
+    } catch (err) {
+      sendStatus({ status: "error", message: `检查更新失败: ${err.message}` })
+    }
+  })
 
-  ipcMain.handle('download-update', () => {
-    autoUpdater.downloadUpdate();
-  });
+  ipcMain.handle("download-update", () => {
+    if (isDev) return
+    autoUpdater.downloadUpdate()
+  })
+
+  ipcMain.handle("install-update", () => {
+    if (isDev) return
+    autoUpdater.quitAndInstall()
+  })
+}
+  })
 
   ipcMain.handle('install-update', () => {
     autoUpdater.quitAndInstall();
