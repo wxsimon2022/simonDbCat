@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
@@ -7,14 +7,31 @@ const isDev = !app.isPackaged;
 let mainWindow = null;
 let serverInstance = null;
 
+function sendStatus(status) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', status);
+  }
+}
+
 // ─── Auto Updater ─────────────────────────────────
 function setupAutoUpdater() {
-  if (isDev) return; // Skip in dev mode
+  if (isDev) return;
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  autoUpdater.on('checking-for-update', () => {
+    sendStatus({ status: 'checking', message: '正在检查更新...' });
+  });
+
   autoUpdater.on('update-available', (info) => {
+    sendStatus({
+      status: 'available',
+      message: `新版本 v${info.version} 可用`,
+      version: info.version,
+      info,
+    });
+    // Native dialog fallback
     dialog.showMessageBox({
       type: 'info',
       title: '发现新版本',
@@ -29,7 +46,24 @@ function setupAutoUpdater() {
     });
   });
 
-  autoUpdater.on('update-downloaded', () => {
+  autoUpdater.on('download-progress', (progressObj) => {
+    sendStatus({
+      status: 'downloading',
+      message: '正在下载更新...',
+      progress: Math.round(progressObj.percent),
+      bytesPerSecond: progressObj.bytesPerSecond,
+      total: progressObj.total,
+      transferred: progressObj.transferred,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    sendStatus({
+      status: 'downloaded',
+      message: '更新已下载完成',
+      version: info.version,
+      info,
+    });
     dialog.showMessageBox({
       type: 'info',
       title: '更新已下载',
@@ -45,18 +79,43 @@ function setupAutoUpdater() {
 
   autoUpdater.on('error', (err) => {
     console.error('[auto-updater]', err.message);
+    sendStatus({ status: 'error', message: `检查更新失败: ${err.message}` });
   });
 
   autoUpdater.on('update-not-available', () => {
-    console.log('[auto-updater] 已是最新版本');
+    sendStatus({ status: 'not-available', message: '已是最新版本' });
   });
 
   // Check for updates after a short delay
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch(err => {
       console.error('[auto-updater] check failed:', err.message);
+      sendStatus({ status: 'error', message: `检查更新失败: ${err.message}` });
     });
   }, 5000);
+}
+
+// ─── IPC Handlers ─────────────────────────────────
+function setupIPC() {
+  ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+  });
+
+  ipcMain.handle('check-for-updates', async () => {
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (err) {
+      sendStatus({ status: 'error', message: `检查更新失败: ${err.message}` });
+    }
+  });
+
+  ipcMain.handle('download-update', () => {
+    autoUpdater.downloadUpdate();
+  });
+
+  ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall();
+  });
 }
 
 // ─── App Start ────────────────────────────────────
@@ -79,6 +138,7 @@ async function startApp() {
 
     serverInstance = await startServer(port, distPath);
     createWindow(port);
+    setupIPC();
     setupAutoUpdater();
   } catch (err) {
     console.error('Fatal error:', err);

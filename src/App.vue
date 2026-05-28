@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ElMessage, ElMessageBox } from "element-plus"
+import type { UpdateStatus } from "./types"
 import { ref, onMounted } from 'vue'
 import { useConnectionStore } from './stores/connections'
 import { useTabStore } from './stores/tabs'
@@ -16,9 +18,29 @@ const tabStore = useTabStore()
 const sidebarWidth = ref(260)
 const resizing = ref(false)
 const showConnections = ref(false)
+const updateDialogVisible = ref(false)
+const updateStatus = ref<UpdateStatus | null>(null)
+const updateCleanup = ref<(() => void) | null>(null)
+const currentVersion = ref("")
 
 onMounted(() => {
   connStore.fetchAll()
+  if (window.electronAPI) {
+    window.electronAPI.getAppVersion().then((v: string) => { currentVersion.value = v })
+    const cleanup = window.electronAPI.onUpdateStatus((status: UpdateStatus) => {
+      updateStatus.value = status
+      if (status.status === "downloaded") {
+        ElMessageBox.confirm("更新已下载完成，是否立即重启安装?", "更新就绪", {
+          confirmButtonText: "立即重启",
+          cancelButtonText: "稍后",
+          type: "info",
+        }).then(() => {
+          window.electronAPI?.installUpdate()
+        }).catch(() => {})
+      }
+    })
+    updateCleanup.value = cleanup
+  }
 })
 
 function startResize(e: MouseEvent) {
@@ -46,6 +68,15 @@ function closeTab(id: string) {
   tabStore.close(id)
 }
 
+function checkForUpdate() {
+  if (!window.electronAPI) {
+    ElMessage.info("仅在桌面端可用")
+    return
+  }
+  updateStatus.value = { status: "checking", message: "正在检查更新..." }
+  updateDialogVisible.value = true
+  window.electronAPI.checkForUpdates()
+}
 function openNewQuery() {
   // Use connection from active tab, currentId, or first available
   let connId: number | null = null
@@ -105,6 +136,10 @@ function openNewQuery() {
           <span>SQL 查询</span>
         </el-button>
         <el-button text size="small" class="topbar-btn" @click="showConnections = !showConnections">
+        <el-button text size="small" class="topbar-btn" @click="checkForUpdate">
+          <span class="topbar-btn-icon">🔄</span>
+          <span>检查更新</span>
+        </el-button>
           <span class="topbar-btn-icon">🔌</span>
           <span>连接管理</span>
         </el-button>
@@ -168,6 +203,37 @@ function openNewQuery() {
     >
       <ConnectionsView />
     </el-drawer>
+
+    <!-- Update Dialog -->
+    <el-dialog v-model="updateDialogVisible" title="检查更新" width="420px" :close-on-click-modal="false">
+      <div v-if="updateStatus" class="update-content">
+        <div class="update-icon">
+          <template v-if="updateStatus.status === 'checking'">🔍</template>
+          <template v-else-if="updateStatus.status === 'available'">📥</template>
+          <template v-else-if="updateStatus.status === 'downloading'">⏬</template>
+          <template v-else-if="updateStatus.status === 'downloaded'">✅</template>
+          <template v-else-if="updateStatus.status === 'not-available'">✅</template>
+          <template v-else-if="updateStatus.status === 'error'">❌</template>
+        </div>
+        <div class="update-message">{{ updateStatus.message }}</div>
+        <div v-if="updateStatus.version" class="update-version">
+          版本: v{{ updateStatus.version }}
+        </div>
+        <div v-if="updateStatus.status === 'downloading' && updateStatus.progress !== undefined" class="update-progress">
+          <el-progress :percentage="updateStatus.progress" :stroke-width="12" />
+        </div>
+        <div class="update-current-version">当前版本: v{{ currentVersion || appVersion }}</div>
+      </div>
+      <template #footer>
+        <el-button @click="updateDialogVisible = false">关闭</el-button>
+        <el-button v-if="updateStatus?.status === 'available'" type="primary" @click="window.electronAPI?.downloadUpdate()">
+          下载更新
+        </el-button>
+        <el-button v-if="updateStatus?.status === 'downloaded'" type="primary" @click="window.electronAPI?.installUpdate()">
+          立即重启安装
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -376,6 +442,34 @@ html, body, #app { height: 100%; font-family: -apple-system, BlinkMacSystemFont,
   color: #909399;
   margin-bottom: 24px;
 }
+.update-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+}
+.update-icon {
+  font-size: 40px;
+}
+.update-message {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+.update-version {
+  font-size: 13px;
+  color: #409eff;
+}
+.update-progress {
+  width: 100%;
+  padding: 0 20px;
+}
+.update-current-version {
+  font-size: 12px;
+  color: #909399;
+}
+
 .welcome-actions {
   display: flex;
   justify-content: center;

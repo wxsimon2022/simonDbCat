@@ -35,5 +35,32 @@ export interface QueryResult {
 export interface DbItem {
   name: string
 }
+
+export interface UpdateStatus {
+  status: 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'
+  message: string
+  version?: string
+  progress?: number
+  bytesPerSecond?: number
+  total?: number
+  transferred?: number
+}
+
+// Electron API exposed via preload
+export interface ElectronAPI {
+  platform: string
+  checkForUpdates: () => Promise<void>
+  downloadUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
+  getAppVersion: () => Promise<string>
+  onUpdateStatus: (callback: (status: UpdateStatus) => void) => () => void
+}
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI
+  }
+}
+
 // Vite injected global
 declare const __APP_VERSION__: string;
