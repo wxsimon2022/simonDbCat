@@ -9,21 +9,23 @@
     "dev": "concurrently -n client,server -c blue,green \"npm run dev:client\" \"npm run dev:server\"",
     "build": "vite build",
     "electron:dev": "concurrently -k \"npm run dev:client\" \"sleep 2 && npx electron .\"",
-    "electron:build": "npm version patch --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
+    "electron:build": "npm version patch --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder --publish=never",
     "preview": "vite preview",
     "server": "node server/index.cjs",
-    "release": "npm version patch && bash scripts/release.sh",
+    "release": "npm version patch && rm -rf dist release && npm run build && npx electron-builder --publish=always && bash scripts/release.sh --upload-only",
     "release:upload": "bash scripts/release.sh --upload-only",
     "postinstall": "electron-builder install-app-deps || true",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "electron:build:minor": "npm version minor --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
     "electron:build:major": "npm version major --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
-    "version:bump": "npm version patch --no-git-tag-version"
+    "version:bump": "npm version patch --no-git-tag-version",
+    "electron:build:publish": "npm version patch --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder --publish=always"
   },
   "dependencies": {
     "axios": "^1.16.1",
     "better-sqlite3": "^12.10.0",
     "cors": "^2.8.6",
+    "electron-updater": "^6.8.3",
     "element-plus": "^2.14.0",
     "express": "^4.22.2",
     "mysql2": "^3.22.4",
@@ -79,7 +81,8 @@
       "identity": false,
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "10.15",
+      "publish": null
     },
     "win": {
       "target": [
@@ -96,8 +99,16 @@
     },
     "asarUnpack": [
       "node_modules/better-sqlite3/**",
-      "node_modules/mysql2/**"
+      "node_modules/mysql2/**",
+      "node_modules/electron-updater/**"
     ],
-    "afterSign": null
+    "afterSign": null,
+    "publish": {
+      "provider": "github",
+      "owner": "wxsimon2022",
+      "repo": "simonDbCat",
+      "releaseType": "release"
+    },
+    "generateUpdatesFilesForAllChannels": true
   }
 }

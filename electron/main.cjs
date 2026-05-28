@@ -1,33 +1,85 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let serverInstance = null;
 
+// ─── Auto Updater ─────────────────────────────────
+function setupAutoUpdater() {
+  if (isDev) return; // Skip in dev mode
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: '发现新版本',
+      message: `新版本 v${info.version} 可用`,
+      detail: `当前版本: v${app.getVersion()}\n是否下载更新?`,
+      buttons: ['下载', '稍后'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) {
+        autoUpdater.downloadUpdate();
+      }
+    });
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: '更新已下载',
+      message: '更新已下载完成，是否立即重启安装?',
+      buttons: ['立即重启', '稍后'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[auto-updater]', err.message);
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('[auto-updater] 已是最新版本');
+  });
+
+  // Check for updates after a short delay
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('[auto-updater] check failed:', err.message);
+    });
+  }, 5000);
+}
+
+// ─── App Start ────────────────────────────────────
 async function startApp() {
   try {
-    // Determine server path (inside app.asar in production)
     const serverPath = isDev
       ? path.join(__dirname, '..', 'server', 'index.cjs')
       : path.join(process.resourcesPath, 'app.asar', 'server', 'index.cjs');
 
-    // Validate server file exists
     if (!fs.existsSync(serverPath)) {
       throw new Error(`Server file not found at: ${serverPath}`);
     }
 
     const { startServer } = require(serverPath);
 
-    // Find available port
     const port = await findPort(3100);
     const distPath = isDev
       ? path.join(__dirname, '..', 'dist')
       : path.join(path.dirname(serverPath), '..', 'dist');
-    serverInstance = await startServer(port, distPath);
 
+    serverInstance = await startServer(port, distPath);
     createWindow(port);
+    setupAutoUpdater();
   } catch (err) {
     console.error('Fatal error:', err);
     dialog.showErrorBox('启动失败', err.message + '\n\n' + err.stack);
@@ -72,7 +124,6 @@ function createWindow(port) {
     mainWindow.loadURL(`http://127.0.0.1:${port}`);
   }
 
-  // Capture renderer errors
   mainWindow.webContents.on('console-message', (event, level, msg) => {
     if (level >= 2) console.error('[renderer]', msg);
   });
