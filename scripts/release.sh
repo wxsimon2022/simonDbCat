@@ -31,6 +31,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 选项:
   --upload-only  跳过构建，仅用已有的 release/ 产物创建 Release
   --push, -y       跳过确认提示，直接发布
+  --all-arch     构建 arm64 + x64 双架构（默认仅当前架构）
   --help, -h     显示帮助
 
 前置条件:
@@ -63,18 +64,32 @@ if [ -z "$REMOTE" ]; then
 fi
 info "远端仓库: $REMOTE"
 
+# ─── 检测架构 ────────────────────────────────────
+ARCH_FLAG=""
+if [ "$UPLOAD_ONLY" != "--upload-only" ]; then
+  if [[ "$*" != *"--all-arch"* ]]; then
+    ARCH="$(uname -m)"
+    if [ "$ARCH" = "arm64" ]; then
+      ARCH_FLAG="--arm64"
+    else
+      ARCH_FLAG="--x64"
+    fi
+    info "🔍 检测到 ${ARCH}，仅构建当前架构 (使用 --all-arch 构建双架构)"
+  fi
+fi
+
 # ─── 1. Build Frontend ────────────────────────────────
 if [ "$UPLOAD_ONLY" != "--upload-only" ]; then
   info "🧹 清理旧构建..."
-  rm -rf dist release
+  rm -rf release
 
-  info "📦 构建前端..."
+  info "📦 构建前端 (增量)..."
   npx vite build
   ok "前端构建完成"
 
   # ─── 2. Package Desktop App ─────────────────────────
-  info "🖥️  打包桌面应用..."
-  npx electron-builder --config
+  info "🖥️  打包桌面应用 $ARCH_FLAG..."
+  npx electron-builder --config $ARCH_FLAG
   ok "桌面应用打包完成"
 else
   info "⏭️  跳过构建，只创建 Release"

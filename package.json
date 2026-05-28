@@ -1,7 +1,7 @@
 {
   "name": "mydb",
   "private": true,
-  "version": "1.0.9",
+  "version": "1.0.10",
   "type": "module",
   "scripts": {
     "dev:client": "vite",
@@ -9,7 +9,7 @@
     "dev": "concurrently -n client,server -c blue,green \"npm run dev:client\" \"npm run dev:server\"",
     "build": "vite build",
     "electron:dev": "concurrently -k \"npm run dev:client\" \"sleep 2 && npx electron .\"",
-    "electron:build": "node scripts/bump-version.cjs patch && rm -rf dist release && npm run build && npx electron-builder --publish=never",
+    "electron:build": "node scripts/bump-version.cjs patch --no-tag && rm -rf release && npm run build && npx electron-builder --config $(node scripts/arch-flag.cjs) --publish=never",
     "preview": "vite preview",
     "server": "node server/index.cjs",
     "release": "node scripts/bump-version.cjs patch --no-tag && rm -rf dist release && npm run build && npx electron-builder --publish=always && bash scripts/release.sh --upload-only",
@@ -19,7 +19,7 @@
     "electron:build:minor": "npm version minor --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
     "electron:build:major": "npm version major --no-git-tag-version && rm -rf dist release && npm run build && npx electron-builder",
     "version:bump": "npm version patch --no-git-tag-version",
-    "electron:build:publish": "node scripts/bump-version.cjs patch && rm -rf dist release && npm run build && npx electron-builder --publish=always"
+    "electron:build:publish": "node scripts/bump-version.cjs patch --no-tag && rm -rf release && npm run build && npx electron-builder --config $(node scripts/arch-flag.cjs) --publish=always"
   },
   "dependencies": {
     "axios": "^1.16.1",
@@ -109,6 +109,7 @@
       "releaseType": "release"
     },
     "generateUpdatesFilesForAllChannels": true,
-    "icon": "build/icon.png"
+    "icon": "build/icon.png",
+    "compression": "store"
   }
 }
