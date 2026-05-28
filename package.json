@@ -46,7 +46,7 @@
   },
   "main": "electron/main.cjs",
   "build": {
-    "appId": "com.mydb.app",
+    "appId": "com.simondbcat.app",
     "productName": "simonDbCat",
     "directories": {
       "output": "release"

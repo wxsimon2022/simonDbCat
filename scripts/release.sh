@@ -120,7 +120,7 @@ done < <(find "$ROOT_DIR/release" -maxdepth 1 -type f \( -name "*.dmg" -o -name 
 
 # 生成 Release 说明
 RELEASE_NOTES=$(cat <<EOF
-## MyDB v${VERSION}
+## simonDbCat v${VERSION}
 
 ### 构建信息
 - 版本: ${VERSION}
@@ -138,10 +138,10 @@ EOF
 
 # 创建 Release（先用空的上传，再附加文件）
 RELEASE_URL=$(gh release create "$TAG" \
-  --title "MyDB v${VERSION}" \
+  --title "simonDbCat v${VERSION}" \
   --notes "$RELEASE_NOTES" \
   ${#ASSETS[@]} --raw 2>/dev/null || gh release create "$TAG" \
-  --title "MyDB v${VERSION}" \
+  --title "simonDbCat v${VERSION}" \
   --notes "$RELEASE_NOTES")
 
 # 上传构建产物
