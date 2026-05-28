@@ -101,6 +101,10 @@ async function loadTree() {
 }
 
 function handleNodeClick(node: TreeNode) {
+  if (node.type === 'database') {
+    store.selectDatabase(node.database!)
+    return
+  }
   if (node.type === 'table') {
     tabStore.open({
       id: `data-${node.connId}-${node.database}-${node.table}`,

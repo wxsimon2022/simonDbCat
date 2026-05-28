@@ -68,19 +68,29 @@ const STORAGE_KEY = 'simonDbCat_savedQueries'
 onMounted(async () => {
   store.select(connIdNum.value)
   loadSavedQueries()
+  if (!props.initialDb) {
+    const dbParam = route.query.database as string
+    if (dbParam) {
+      selectedDb.value = dbParam
+    } else if (store.currentDatabase) {
+      selectedDb.value = store.currentDatabase
+    }
+  }
   if (!props.initialSql) {
     const sqlParam = route.query.sql as string
     if (sqlParam) sql.value = sqlParam
-  }
-  if (!props.initialDb) {
-    const dbParam = route.query.database as string
-    if (dbParam) selectedDb.value = dbParam
   }
   await loadDatabases()
   await loadSchemaCache()
 })
 
 watch(selectedDb, () => { loadSchemaCache() })
+
+watch(() => store.currentDatabase, (db) => {
+  if (db && db !== selectedDb.value) {
+    selectedDb.value = db
+  }
+})
 
 function loadSavedQueries() {
   try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) savedQueries.value = JSON.parse(raw) } catch {}

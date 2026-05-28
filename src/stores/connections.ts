@@ -7,6 +7,7 @@ export const useConnectionStore = defineStore('connections', () => {
   const list = ref<ConnectionConfig[]>([])
   const currentId = ref<number | null>(null)
   const loading = ref(false)
+  const currentDatabase = ref('')
 
   async function fetchAll() {
     loading.value = true
@@ -44,5 +45,9 @@ export const useConnectionStore = defineStore('connections', () => {
     currentId.value = id
   }
 
-  return { list, currentId, loading, fetchAll, create, update, remove, test, select }
+  function selectDatabase(db: string) {
+    currentDatabase.value = db
+  }
+
+  return { list, currentId, currentDatabase, loading, fetchAll, create, update, remove, test, select, selectDatabase }
 })
