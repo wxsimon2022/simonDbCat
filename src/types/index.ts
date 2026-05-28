@@ -24,6 +24,8 @@ export interface TableData {
   columns: ColumnInfo[]
   rows: Record<string, unknown>[]
   total: number
+  limit: number
+  offset: number
 }
 
 export interface QueryResult {
@@ -36,6 +38,75 @@ export interface DbItem {
   name: string
 }
 
+export interface IndexInfo {
+  keyName: string
+  unique: boolean
+  columns: { seq: number; column: string }[]
+  indexType: string
+}
+
+export interface ForeignKeyInfo {
+  columnName: string
+  constraintName: string
+  refTable: string
+  refColumn: string
+  onUpdate: string
+  onDelete: string
+}
+
+export interface ViewInfo {
+  name: string
+  createView?: string
+}
+
+export interface RoutineInfo {
+  name: string
+  type: string
+  definition: string
+  created: string
+  altered: string
+}
+
+export interface TriggerInfo {
+  name: string
+  event: string
+  table: string
+  timing: string
+  statement: string
+  created: string
+}
+
+export interface EventInfo {
+  name: string
+  definer: string
+  type: string
+  status: string
+  starts: string
+  ends: string
+}
+
+export interface ExplainPlan {
+  plan: Record<string, unknown>[]
+}
+
+export interface MultiQueryResult {
+  results: {
+    sql: string
+    columns?: ColumnInfo[]
+    rows?: Record<string, unknown>[]
+    affectedRows?: number
+    error?: string
+    success: boolean
+  }[]
+}
+
+export interface ExportResult {
+  data: string
+  format: string
+  columns: string[]
+  total: number
+}
+
 export interface UpdateStatus {
   status: 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'
   message: string
@@ -46,7 +117,6 @@ export interface UpdateStatus {
   transferred?: number
 }
 
-// Electron API exposed via preload
 export interface ElectronAPI {
   platform: string
   checkForUpdates: () => Promise<void>
@@ -62,5 +132,4 @@ declare global {
   }
 }
 
-// Vite injected global
 declare const __APP_VERSION__: string;
