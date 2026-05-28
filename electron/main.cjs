@@ -13,6 +13,23 @@ function sendStatus(status) {
   }
 }
 
+function getUpdateConfigPath() {
+  if (isDev) return '';
+  return path.join(process.resourcesPath, 'app-update.yml');
+}
+
+function checkUpdateConfig() {
+  const configPath = getUpdateConfigPath();
+  if (!fs.existsSync(configPath)) {
+    sendStatus({
+      status: 'error',
+      message: '未找到更新配置文件 (app-update.yml)，请使用 npm run electron:build 重新打包应用',
+    });
+    return false;
+  }
+  return true;
+}
+
 // ─── Auto Updater ─────────────────────────────────
 function setupAutoUpdater() {
   if (isDev) return;
@@ -31,7 +48,6 @@ function setupAutoUpdater() {
       version: info.version,
       info,
     });
-    // Native dialog fallback
     dialog.showMessageBox({
       type: 'info',
       title: '发现新版本',
@@ -88,6 +104,7 @@ function setupAutoUpdater() {
 
   // Check for updates after a short delay
   setTimeout(() => {
+    if (!checkUpdateConfig()) return;
     autoUpdater.checkForUpdates().catch(err => {
       console.error('[auto-updater] check failed:', err.message);
       sendStatus({ status: 'error', message: `检查更新失败: ${err.message}` });
@@ -106,6 +123,7 @@ function setupIPC() {
       sendStatus({ status: "error", message: "开发环境下不支持检查更新，请构建后重试" })
       return
     }
+    if (!checkUpdateConfig()) return
     try {
       await autoUpdater.checkForUpdates()
     } catch (err) {
@@ -115,6 +133,7 @@ function setupIPC() {
 
   ipcMain.handle("download-update", () => {
     if (isDev) return
+    if (!checkUpdateConfig()) return
     autoUpdater.downloadUpdate()
   })
 
